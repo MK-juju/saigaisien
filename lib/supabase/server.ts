@@ -37,8 +37,20 @@ export async function requireUserOrDemo() {
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SECRET_KEY
     if (!url || !key) throw new Error('DEMO_SERVER_CONFIG_MISSING')
     const serviceClient = createServerClient(url, key, { cookies: { getAll: () => [], setAll: () => undefined } })
-    const { data: profile } = await serviceClient.from('profiles').select('id,role_type').eq('role_type', demoRole).limit(1).maybeSingle()
-    if (!profile?.id) throw new Error('DEMO_PROFILE_MISSING')
+    // デモCookieは英語の識別子ですが、profiles.role_typeは日本語ラベルまたは英語値で保存される場合があります。
+    // 両方を検索して、アップロード環境でも対応するデモプロフィールを確実に解決します。
+    const roleAliases: Record<string, string[]> = {
+      victim: ['victim', '被災者'],
+      supporter: ['supporter', '支援者'],
+      admin: ['admin', '管理者'],
+    }
+    const { data: profile, error: profileError } = await serviceClient
+      .from('profiles')
+      .select('id,role_type')
+      .in('role_type', roleAliases[resolvedDemoRole])
+      .limit(1)
+      .maybeSingle()
+    if (profileError || !profile?.id) throw new Error('DEMO_PROFILE_MISSING')
     return { supabase: serviceClient, user: { id: profile.id }, demo: true as const }
   }
 }
