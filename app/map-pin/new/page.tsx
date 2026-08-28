@@ -20,7 +20,7 @@ function NewMapPinPageContent() {
       setError('タイトルと投稿内容を入力してください')
       return
     }
-    router.push('/')
+    void fetch('/api/map-pins', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin_type: form.type, title: form.title.trim(), description: form.content.trim(), latitude: Number(coordinates.lat), longitude: Number(coordinates.lng) }) }).then(async (response) => { if (!response.ok) { const result = await response.json().catch(() => ({})); setError(result.error ?? 'ピンを投稿できませんでした'); return } router.push('/') }).catch(() => setError('通信に失敗しました。内容を確認して再度お試しください'))
   }
 
   return (
