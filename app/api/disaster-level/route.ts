@@ -1,7 +1,16 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
-import { createClient } from '@/lib/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { requireAdmin } from '@/lib/authz'
+
+// 災害レベルのDB読み書きはサーバーだけで行い、RLSに左右されない管理用クライアントを使います。
+function createDisasterLevelClient() {
+  return createServiceClient(
+    process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } },
+  )
+}
 
 /**
  * 災害レベルはサーバー側の値だけを信頼します。Lv.0は廃止し、Lv.1〜3で運用します。
@@ -9,7 +18,7 @@ import { requireAdmin } from '@/lib/authz'
  */
 export async function GET() {
   // DBの全国レコードを最優先し、未初期化時だけ環境変数へフォールバックします。
-  const supabase = await createClient()
+  const supabase = createDisasterLevelClient()
   const { data } = await supabase.from('disaster_regions').select('level').eq('scope', '全国').maybeSingle()
   const cookieLevel = (await cookies()).get('disaster-level')?.value
   const raw = Number(data?.level ?? cookieLevel ?? process.env.DISASTER_LEVEL ?? '1')
@@ -26,7 +35,7 @@ export async function POST(request: Request) {
   try {
     // 管理者判定はapp_metadataを使うサーバー側ヘルパーで強制します。
     await requireAdmin()
-    const supabase = await createClient()
+    const supabase = createDisasterLevelClient()
     const updatedAt = new Date().toISOString()
     // 全国のレコードを更新し、未作成の場合も同じ処理で作成してDBを必ず最新化します。
     const { error } = await supabase.from('disaster_regions').upsert({
