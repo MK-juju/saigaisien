@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
@@ -8,7 +8,7 @@ import 'leaflet/dist/leaflet.css'
 import { AlertTriangle, LocateFixed, MapPin, RotateCcw, Search, ShieldCheck, Trash2, X } from 'lucide-react'
 
 export type DisasterPin = {
-  id: number
+  id: string | number
   type: '避難所' | '道路通行不能' | '通行注意' | '土砂崩れ' | '倒壊' | '通行止め' | '浸水' | '求援' | '指定物資置き場'
   title: string
   author: string
@@ -48,6 +48,31 @@ export default function DisasterMap({ onNotice, role }: { onNotice: (message: st
   const router = useRouter()
   const [pins, setPins] = useState(initialPins)
   const [selected, setSelected] = useState<DisasterPin | null>(null)
+
+  // 公開ピンはサーバーAPIから取得し、通信失敗時だけ既存の初期表示へ戻します。
+  // 権限判定や保存処理は必ずAPI側で行い、ブラウザの状態を信頼しません。
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/map-pins')
+      .then(async (response) => {
+        if (!response.ok) return
+        const payload = await response.json()
+        const rows = Array.isArray(payload.data) ? payload.data : []
+        const nextPins = rows.map((row: Record<string, unknown>) => ({
+          id: String(row.id ?? crypto.randomUUID()),
+          type: (row.pin_type ?? row.type ?? '通行注意') as DisasterPin['type'],
+          title: String(row.title ?? '地図ピン'),
+          author: String(row.author ?? '投稿者'),
+          content: String(row.description ?? row.content ?? ''),
+          lat: Number(row.latitude ?? row.lat),
+          lng: Number(row.longitude ?? row.lng),
+          verified: Boolean(row.approved),
+        })).filter((pin: DisasterPin) => Number.isFinite(pin.lat) && Number.isFinite(pin.lng))
+        if (!cancelled && nextPins.length > 0) setPins(nextPins)
+      })
+      .catch(() => undefined)
+    return () => { cancelled = true }
+  }, [])
   const [confirmingPoint, setConfirmingPoint] = useState<{ lat: number; lng: number } | null>(null)
   const [waterWarning, setWaterWarning] = useState(false)
   const [query, setQuery] = useState('')
