@@ -85,6 +85,20 @@ export default function Page() {
     }
   }, [menuOpen])
 
+  // メインメニューを開いている間、メニュー本体と開閉ボタン以外のクリックで自動的に閉じます。
+  // キャプチャ段階で監視するため、ページ内の別コンポーネントやリンクからのクリックも確実に処理します。
+  useEffect(() => {
+    if (!menuOpen) return
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      const target = event.target
+      if (!(target instanceof Element)) return
+      if (target.closest('.quick-menu') || target.closest('[aria-label="メインメニュー"]') || target.closest('[aria-label="メインメニューを閉じる"]')) return
+      setMenuOpen(false)
+    }
+    document.addEventListener('pointerdown', closeOnOutsidePointer, true)
+    return () => document.removeEventListener('pointerdown', closeOnOutsidePointer, true)
+  }, [menuOpen])
+
   const filtered = useMemo(() => {
     const terms = query.split(/[、,\s]+/).map(term => term.trim()).filter(Boolean)
     return requests.filter(r => {
@@ -121,7 +135,7 @@ export default function Page() {
       <div className="location"><MapPin size={15}/>全国の支援情報</div>
       <div className="top-actions"><a className="text-button" href="/auth/login">ログイン</a><button className={`level level-${level}`} onClick={()=>isAdmin?setAdminOpen(true):setLevelOpen(true)}><span className="status-dot"/>災害���ベル Lv.{level}<ChevronRight size={14}/></button><IconButton label="通知"><Bell size={19}/><i className="notification-dot"/></IconButton></div>
     </header>
-    <div className="alertbar"><AlertTriangle size={17}/><span><b>支援情報をご確認ください</b>：{level !== null && level <= 1?'通常のマッチングが利用できます':level===2?'指定物資置き場への支援のみ利用できます':'安全確認のため個人支援・マッチングを停止しています'}</span>{isAdmin&&<button onClick={()=>setAdminOpen(true)}>災害レベルを確認 <ChevronRight size={14}/></button>}</div>
+    <div className="alertbar"><AlertTriangle size={17}/><span><b>支援情報をご確認ください</b>：{level !== null && level <= 1?'通常の��ッチングが利用できます':level===2?'指定物資置き場への支援のみ利用できます':'安全確認のため個人支援・マッチングを停止しています'}</span>{isAdmin&&<button onClick={()=>setAdminOpen(true)}>災害レベルを確認 <ChevronRight size={14}/></button>}</div>
     <div className="layout">
       <aside className={`sidebar ${menuOpen?'is-open':''}`}><div className="sidebar-head"><div className="side-label">メインメニュー</div></div>{(['検索','投稿','地図','マイページ'] as Tab[]).map((item,i)=>{const I=[Search,Plus,MapPin,UserRound][i]; return <button key={item} className={tab===item?'nav-item active':'nav-item'} onClick={()=>selectTab(item)}><I size={19}/>{item}{item==='検索'&&<span className="count">3</span>}</button>})}<div className="side-divider"/><div className="side-label">安全とサポート</div>{isAdmin&&<button className="nav-item" onClick={()=>setAdminOpen(true)}><ShieldCheck size={19}/>管理・安全設定</button>}<button className="nav-item" onClick={()=>showNotice('ヘルプセンターを開きました')}><CircleHelp size={19}/>ヘルプセンター</button><div className="sidebar-footer"><div className="offline"><span className="status-dot green"/>オフライン保存 有効</div><small>通信が不安定な場合も、入力内容は端末に保存されます。</small></div></aside>
       <section className="content"><div className="content-head"><div><p className="eyebrow">{tab==='検索'?'支援を探す':tab==='投稿'?'支援を届ける':tab==='地図'?'地域の状況':'あなたの活動'}</p><h1>{tab}</h1></div>{tab==='検索'&&<button className="primary-button" onClick={()=>selectTab('投稿')}><Plus size={17}/>支援を投稿する</button>}</div>
