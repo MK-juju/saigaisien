@@ -25,6 +25,8 @@ export default function AccountPage() {
     const supabase = createClient()
     const { data: auth } = await supabase.auth.getUser()
     if (!auth.user) { setMessage('保存するにはログインしてください。'); return }
+    // role_type は自己申告フォームで選択した役割をSupabaseへ保存します。
+    // upsertにより初回登録と既存プロフィールの更新を同じ処理で行います。
     const { error } = await supabase.from('profiles').upsert({ id: auth.user.id, role_type: role, disaster_location: location })
     setMessage(error ? '申告を保存できませんでした。' : '申告内容を保存しました。')
   }
