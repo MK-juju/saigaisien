@@ -45,7 +45,7 @@ export default function MatchingPage() {
   const locked = level >= 2
 
   return <main className="standalone-page">
-    <header className="standalone-header"><Link href="/" className="icon-button" aria-label="アプリに戻る"><ArrowLeft size={20} /></Link><div className="brand"><span className="brand-mark"><HeartHandshake size={21} /></span><span><strong>よりそい</strong><small>災害支援マッチング</small></span></div><span className="standalone-level"><span className={`status-dot ${locked ? '' : 'green'}`} />地域レベル Lv.{level}</span></header>
+    <header className="standalone-header"><Link href="/" className="icon-button" aria-label="アプリに戻る"><ArrowLeft size={20} /></Link><div className="brand"><span className="brand-mark"><HeartHandshake size={21} /></span><span><strong>よりそい</strong><small>災害支援マッチング</small></span></div><span className="standalone-level"><span className={`status-dot ${locked ? '' : 'green'}`} />災害レベル Lv.{level}</span></header>
     <section className="standalone-content"><div className="content-head"><div><p className="eyebrow">つながりを確認する</p><h1>マッチング</h1></div><Link href="/" className="secondary-button">支援依頼を探す</Link></div>
       {locked ? <div className="locked-state matching-lock-overlay" role="alertdialog" aria-live="assertive"><LockKeyhole size={30} /><h2>この機能はレベル2以上では使用できません</h2><p>安全が確認され、地域レベルがLv.1以下になるまでマッチング機能は停止しています。</p><Link href="/" className="primary-button">検索へ戻る</Link></div> : <>
         <div className="matching-intro"><div className="intro-icon"><HeartHandshake size={22} /></div><div><h2>マッチング候補を確認</h2><p>成立状況と対象の支援依頼を確認できます。マッチ度や連絡先は表示しません。</p></div><ShieldCheck size={20} /></div>
