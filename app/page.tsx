@@ -135,7 +135,17 @@ export default function Page() {
       showNotice('安全情報を確認できないため、マッチングを開けません')
     }
   }
-  const submitPost = () => { if (!form.title || !form.place || !form.quantity) return showNotice(role==='被災者'?'必要物資・数量・���取場所を入力してください':'支援物資・数量・支援場所を入力してください'); setRequests([{id:Date.now(), title:form.title, category:form.category, urgency:form.urgency, place:form.place, time:'今', match:0, body:form.description || '支援を必要としています。', tags:form.tags.split(/[、,\s]+/).map((tag:string)=>tag.trim()).filter(Boolean), status:'募集中'}, ...requests]); setForm({title:'',category:'水・飲料',quantity:'',place:'',urgency:'中',description:'',tags:''}); showNotice('支援依頼を公開し���した'); setTab('検索') }
+  // BEGIN DEMO ACCESS: デモアカウントでも実際の投稿APIを利用できるようにします。公開後に削除する場合は、このコメントからENDまで削除します。
+  const submitPost = async () => {
+    if (!form.title || !form.place || !form.quantity) return showNotice(role === '被災者' ? '必要物資・数量・受取場所を入力してください' : '支援物資・数量・支援場所を入力してください')
+    const response = await fetch('/api/posts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ post_type: role === '支援者' ? 'support_offer' : 'victim_request', title: form.title, category: form.category, quantity: form.quantity, place: form.place, urgency: role === '支援者' ? 3 : ({ 低: 1, 中: 3, 高: 5 } as Record<string, number>)[form.urgency] ?? 3, description: form.description, disaster_type: '地震', available_time: role === '支援者' ? '平日18時以降・土日終日' : 'いつでも', tags: form.tags.split(/[、,\\s]+/).map((tag: string) => tag.trim()).filter(Boolean) }) })
+    if (!response.ok) { const result = await response.json().catch(() => ({})); return showNotice(result.error ?? '投稿を保存できませんでした') }
+    setRequests([{ id: Date.now(), title: form.title, category: form.category, urgency: form.urgency, place: form.place, time: '今', match: 0, body: form.description || '支援を必要としています。', tags: form.tags.split(/[、,\\s]+/).map((tag: string) => tag.trim()).filter(Boolean), status: '募集中' }, ...requests])
+    setForm({ title: '', category: '水・飲料', quantity: '', place: '', urgency: '中', description: '', tags: '' })
+    showNotice('支援投稿を公開しました')
+    setTab('検索')
+  }
+  // END DEMO ACCESS
 
   return <main className={`app-shell ${chromeHidden?'chrome-hidden':''}`}>
     <header className="topbar">
