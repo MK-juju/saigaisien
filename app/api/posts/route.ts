@@ -1,7 +1,7 @@
 /** このファイルの役割と主要な処理フローを、実装の近くにコメントで説明しています。 */
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { requireUser } from '@/lib/supabase/server'
+import { requireUserOrDemo } from '@/lib/supabase/server'
 
 const schema = z.object({
   post_type: z.enum(['victim_request', 'support_offer']).default('victim_request'),
@@ -22,7 +22,7 @@ const schema = z.object({
 
 export async function GET(request: Request) {
   try {
-    const { supabase } = await requireUser()
+    const { supabase } = await requireUserOrDemo()
     const search = new URL(request.url).searchParams.get('q')?.trim()
     let query = supabase.from('posts').select('id,author_id,post_type,title,category,quantity,place,latitude,longitude,urgency,deadline,available_time,delivery_method,description,status,disaster_type,created_at').is('hidden_at', null).order('created_at', { ascending: false }).limit(100)
     if (search) query = query.or(`title.ilike.%${search}%,place.ilike.%${search}%,description.ilike.%${search}%,category.ilike.%${search}%`)
@@ -36,7 +36,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const { supabase, user } = await requireUser()
+    const { supabase, user } = await requireUserOrDemo()
     const parsed = schema.safeParse(await request.json())
     if (!parsed.success) return NextResponse.json({ error: '入力内容を確認してください' }, { status: 400 })
     const { tags, ...post } = parsed.data
