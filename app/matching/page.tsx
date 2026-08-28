@@ -15,7 +15,8 @@ type Filter = 'すべて' | '申請中' | '成立' | '完了'
 export default function MatchingPage() {
   // 環境変数APIを取得できない場合も安全側に倒し、マッチングを開放しません。
   // 初期値でもマッチングを開放しない。サーバー取得が完了するまでロック状態を維持します。
-  const [level, setLevel] = useState(2)
+  // 初期値を表示せず、サーバーの最新値を取得するまでロック画面だけを表示します。
+  const [level, setLevel] = useState<number | null>(null)
   const [items, setItems] = useState<Matching[]>([])
   const [filter, setFilter] = useState<Filter>('すべて')
   const [notice, setNotice] = useState('')
@@ -50,10 +51,11 @@ export default function MatchingPage() {
   }
   const visibleItems = items.filter((item) => filter === 'すべて' || (filter === '申請中' && item.status === 'proposed') || (filter === '成立' && item.status === 'accepted') || (filter === '完了' && item.status === 'completed'))
   // レベル取得前・取得失敗時も誤って機能を開放しないよう、常にロックします。
-  const locked = !levelLoaded || level >= 2
+  const locked = !levelLoaded || level === null || level >= 2
+  const displayLevel = level ?? '確認中'
 
   return <main className="standalone-page">
-    <header className="standalone-header"><Link href="/" className="icon-button" aria-label="アプリに戻る"><ArrowLeft size={20} /></Link><div className="brand"><span className="brand-mark"><HeartHandshake size={21} /></span><span><strong>よりそい</strong><small>災害支援マッチング</small></span></div><span className="standalone-level"><span className={`status-dot ${locked ? '' : 'green'}`} />災害レベル Lv.{level}</span></header>
+    <header className="standalone-header"><Link href="/" className="icon-button" aria-label="アプリに戻る"><ArrowLeft size={20} /></Link><div className="brand"><span className="brand-mark"><HeartHandshake size={21} /></span><span><strong>よりそい</strong><small>災害支援マッチング</small></span></div><span className="standalone-level"><span className={`status-dot ${locked ? '' : 'green'}`} />災害レベル Lv.{displayLevel}</span></header>
     <section className="standalone-content"><div className="content-head"><div><p className="eyebrow">つながりを確認する</p><h1>マッチング</h1></div><Link href="/" className="secondary-button">支援依頼を探す</Link></div>
       {locked ? <div className="locked-state matching-lock-overlay" role="alertdialog" aria-live="assertive"><LockKeyhole size={30} /><h2>この機能はレベル2以上では使用できません</h2><p>災害レベルがLv.1になるまでマッチング機能は停止しています。</p><Link href="/" className="primary-button">検索へ戻る</Link></div> : <>
         <div className="matching-intro"><div className="intro-icon"><HeartHandshake size={22} /></div><div><h2>マッチング候補を確認</h2><p>成立状況と対象の支援依頼を確認できます。マッチ度や連絡先は表示しません。</p></div><ShieldCheck size={20} /></div>
