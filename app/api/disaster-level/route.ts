@@ -1,15 +1,20 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
+import { createClient } from '@/lib/supabase/server'
+import { requireAdmin } from '@/lib/authz'
 
 /**
  * 災害レベルはサーバー側の値だけを信頼します。Lv.0は廃止し、Lv.1〜3で運用します。
  * 管理画面から変更した値は短期の管理Cookieへ反映し、再読込後も判定を揃えます。
  */
 export async function GET() {
+  // DBの全国レコードを最優先し、未初期化時だけ環境変数へフォールバックします。
+  const supabase = await createClient()
+  const { data } = await supabase.from('disaster_regions').select('level').eq('scope', '全国').maybeSingle()
   const cookieLevel = (await cookies()).get('disaster-level')?.value
-  const raw = Number.parseInt(cookieLevel ?? process.env.DISASTER_LEVEL ?? '1', 10)
+  const raw = Number(data?.level ?? cookieLevel ?? process.env.DISASTER_LEVEL ?? '1')
   const level = Number.isFinite(raw) ? Math.min(3, Math.max(1, raw)) : 1
-  return NextResponse.json({ level })
+  return NextResponse.json({ level }, { headers: { 'Cache-Control': 'no-store' } })
 }
 
 export async function POST(request: Request) {
@@ -17,6 +22,15 @@ export async function POST(request: Request) {
   const level = Number(body.level)
   if (!Number.isInteger(level) || level < 1 || level > 3) {
     return NextResponse.json({ error: '災害レベルはLv.1〜Lv.3で指定してください' }, { status: 400 })
+  }
+  try {
+    // 管理者判定はapp_metadataを使うサーバー側ヘルパーで強制します。
+    await requireAdmin()
+    const supabase = await createClient()
+    const { error } = await supabase.from('disaster_regions').update({ level, manual_level: level, level_updated_at: new Date().toISOString() }).eq('scope', '全国')
+    if (error) return NextResponse.json({ error: '災害レベルを保存できませんでした' }, { status: 500 })
+  } catch {
+    return NextResponse.json({ error: '管理者権限が必要です' }, { status: 403 })
   }
   const response = NextResponse.json({ level })
   response.cookies.set('disaster-level', String(level), {
