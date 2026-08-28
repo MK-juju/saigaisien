@@ -14,20 +14,27 @@ type Filter = 'すべて' | '申請中' | '成立' | '完了'
  */
 export default function MatchingPage() {
   // 環境変数APIを取得できない場合も安全側に倒し、マッチングを開放しません。
+  // 初期値でもマッチングを開放しない。サーバー取得が完了するまでロック状態を維持します。
   const [level, setLevel] = useState(2)
   const [items, setItems] = useState<Matching[]>([])
   const [filter, setFilter] = useState<Filter>('すべて')
   const [notice, setNotice] = useState('')
+  const [levelLoaded, setLevelLoaded] = useState(false)
 
   useEffect(() => {
-    // 地域レベルは公開読み取りAPIから取得し、表示とサーバー制限の基準を揃えます。
-    fetch('/api/disaster-level').then(async (response) => {
+// 災害レベルは公開読み取りAPIから取得し、表示とサーバー制限の基準を揃えます。
+    // cache を使わず、管理者が直前に変更したサーバー値を必ず取得します。
+    fetch('/api/disaster-level', { cache: 'no-store' }).then(async (response) => {
       if (!response.ok) return
       const body = await response.json()
       const value = Number(body.level)
-      if (Number.isInteger(value) && value >= 1) setLevel(value)
-    }).catch(() => undefined)
-    fetch('/api/matchings').then(async (response) => {
+      if (Number.isInteger(value) && value >= 1 && value <= 3) setLevel(value)
+      setLevelLoaded(true)
+    }).catch(() => {
+      // レベルを確認できない場合は安全側（ロック）を維持します。
+      setLevelLoaded(true)
+    })
+    fetch('/api/matchings', { cache: 'no-store' }).then(async (response) => {
       if (response.ok) {
         const body = await response.json()
         setItems(body.data ?? [])
@@ -42,7 +49,8 @@ export default function MatchingPage() {
     完了: items.filter((item) => item.status === 'completed').length,
   }
   const visibleItems = items.filter((item) => filter === 'すべて' || (filter === '申請中' && item.status === 'proposed') || (filter === '成立' && item.status === 'accepted') || (filter === '完了' && item.status === 'completed'))
-  const locked = level >= 2
+  // レベル取得前・取得失敗時も誤って機能を開放しないよう、常にロックします。
+  const locked = !levelLoaded || level >= 2
 
   return <main className="standalone-page">
     <header className="standalone-header"><Link href="/" className="icon-button" aria-label="アプリに戻る"><ArrowLeft size={20} /></Link><div className="brand"><span className="brand-mark"><HeartHandshake size={21} /></span><span><strong>よりそい</strong><small>災害支援マッチング</small></span></div><span className="standalone-level"><span className={`status-dot ${locked ? '' : 'green'}`} />災害レベル Lv.{level}</span></header>

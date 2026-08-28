@@ -14,7 +14,7 @@ import {
 
 type Tab = '検索' | '投稿' | '地図' | 'マイページ'
 type Role = '被災者' | '支援者' | '管理者'
-type Request = { id:number; title:string; category:string; urgency:string; place:string; time:string; match:number; body:string; saved?:boolean; status?:string }
+type Request = { id:number; title:string; category:string; urgency:string; place:string; time:string; match:number; body:string; tags?:string[]; saved?:boolean; status?:string }
 
 const initialRequests: Request[] = [
   { id:1, title:'飲料水を届けてほしい', category:'水・飲料', urgency:'高', place:'輪島市 河井町', time:'15分前', match:92, body:'家族3名で避難しています。500mlの水を12本ほど必要としています。受け取りは避難所入口でお願いします。' },
@@ -45,7 +45,7 @@ export default function Page() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [notice, setNotice] = useState('')
   const [draftSaved, setDraftSaved] = useState(false)
-  const [form, setForm] = useState({title:'', category:'水・飲料', quantity:'', place:'', urgency:'中', description:''})
+  const [form, setForm] = useState({title:'', category:'水・飲料', quantity:'', place:'', urgency:'中', description:'', tags:''})
   const [chromeHidden, setChromeHidden] = useState(false)
 
   useEffect(() => {
@@ -69,7 +69,14 @@ export default function Page() {
     }
   }, [menuOpen])
 
-  const filtered = useMemo(() => requests.filter(r => (!query || `${r.title}${r.category}${r.place}`.includes(query)) && (urgency==='すべて'||r.urgency===urgency)), [requests, query, urgency])
+  const filtered = useMemo(() => {
+    const terms = query.split(/[、,\s]+/).map(term => term.trim()).filter(Boolean)
+    return requests.filter(r => {
+      const searchable = `${r.title} ${r.category} ${r.place} ${(r.tags ?? []).join(' ')}`.toLowerCase()
+      const matchesQuery = terms.length === 0 || terms.some(term => searchable.includes(term.toLowerCase()))
+      return matchesQuery && (urgency === 'すべて' || r.urgency === urgency)
+    })
+  }, [requests, query, urgency])
   const showNotice = (text:string) => { setNotice(text); setTimeout(()=>setNotice(''), 2600) }
   // マッチング遷移前にサーバー環境変数由来の災害レベルを確認し、Lv.2以上は画面遷移を止めます。
   const openMatching = async (event?: React.MouseEvent) => {
@@ -87,13 +94,13 @@ export default function Page() {
       showNotice('安全情報を確認できないため、マッチングを開けません')
     }
   }
-  const submitPost = () => { if (!form.title || !form.place || !form.quantity) return showNotice(role==='被災者'?'必要物資・数量・受取場所を入力してください':'支援物資・数量・支援場所を入力してください'); setRequests([{id:Date.now(), title:form.title, category:form.category, urgency:form.urgency, place:form.place, time:'今', match:0, body:form.description || '支援を必要としています。', status:'募集中'}, ...requests]); setForm({title:'',category:'水・飲料',quantity:'',place:'',urgency:'中',description:''}); showNotice('支援依頼を公開しました'); setTab('検索') }
+  const submitPost = () => { if (!form.title || !form.place || !form.quantity) return showNotice(role==='被災者'?'必要物資・数量・受取場所を入力してください':'支援物資・数量・支援場所を入力してください'); setRequests([{id:Date.now(), title:form.title, category:form.category, urgency:form.urgency, place:form.place, time:'今', match:0, body:form.description || '支援を必要としています。', tags:form.tags.split(/[、,\s]+/).map((tag:string)=>tag.trim()).filter(Boolean), status:'募集中'}, ...requests]); setForm({title:'',category:'水・飲料',quantity:'',place:'',urgency:'中',description:'',tags:''}); showNotice('支援依頼を公開しました'); setTab('検索') }
 
   return <main className={`app-shell ${chromeHidden?'chrome-hidden':''}`}>
     <header className="topbar">
       <IconButton label={menuOpen?'メインメニューを閉じる':'メインメニュー'} onClick={()=>setMenuOpen(open=>!open)}><Menu size={20}/></IconButton>
       <a href="/home" className="brand" aria-label="よりそいホーム"><div className="brand-mark"><HeartHandshake size={22}/></div><div><strong>よりそい</strong><span>災害支援マッチング</span></div></a>
-      <div className="location"><MapPin size={15}/>石川県 能登地域</div>
+      <div className="location"><MapPin size={15}/>全国の支援情報</div>
       <div className="top-actions"><a className="text-button" href="/auth/login">ログイン</a><button className={`level level-${level}`} onClick={()=>isAdmin?setAdminOpen(true):setLevelOpen(true)}><span className="status-dot"/>災害レベル Lv.{level}<ChevronRight size={14}/></button><IconButton label="通知"><Bell size={19}/><i className="notification-dot"/></IconButton></div>
     </header>
     <div className="alertbar"><AlertTriangle size={17}/><span><b>支援情報をご確認ください</b>：{level<=1?'通常のマッチングが利用できます':level===2?'指定物資置き場への支援のみ利用できます':'安全確認のため個人支援・マッチングを停止しています'}</span>{isAdmin&&<button onClick={()=>setAdminOpen(true)}>災害レベルを確認 <ChevronRight size={14}/></button>}</div>
@@ -119,7 +126,7 @@ export default function Page() {
   </main>
 }
 
-function PostForm({form,setForm,submit,draftSaved,setDraftSaved,role}:{form:any;setForm:any;submit:()=>void;draftSaved:boolean;setDraftSaved:(x:boolean)=>void;role:Role}) { const update=(k:string,v:string)=>setForm({...form,[k]:v}); const canPost=role==='被災者'; return <div className="form-wrap"><div className="form-intro"><div className="big-icon"><HeartHandshake size={25}/></div><div><h2>{canPost?'支援を依頼する':'支援物資を登録する'}</h2><p>{canPost?'必要な物資や助けを、できるだけ具体的に教えてください。':'支援者情報はマッチングに利用されます。必要な物資を登録してください。'}</p></div></div>{!canPost&&<div className="notice-card"><ShieldCheck size={18}/><span>支援者アカウントは支援依頼を投稿できません。マイページから被災者アカウントへ切り替えると投稿できます。</span></div>}<div className="form-card"><label>{canPost?'必要な物資':'支援できる物資'}<input value={form.title} onChange={e=>update('title',e.target.value)} placeholder={canPost?'例：飲料水を届けてほしい':'例：飲料水・衛生用品を支援'}/></label><div className="form-grid"><label>カテゴリ<select value={form.category} onChange={e=>update('category',e.target.value)}><option>水・飲料</option><option>食料</option><option>医薬品</option><option>乳幼児用品</option><option>衣類・寝具</option></select></label><label>数量<input value={form.quantity} onChange={e=>update('quantity',e.target.value)} placeholder="例：12本"/></label></div><label>受取場所<input value={form.place} onChange={e=>update('place',e.target.value)} placeholder="例：輪島市 河井町 避難所入口"/></label><div className="form-grid"><label>緊急度<div className="segmented">{['低','中','高'].map(x=><button type="button" className={form.urgency===x?'selected':''} onClick={()=>update('urgency',x)} key={x}>{x}</button>)}</div></label><label>受取可能時間<input placeholder="例：いつでも"/></label></div><label>{canPost?'詳細（任意）':'その他（任意）'}<textarea value={form.description} onChange={e=>update('description',e.target.value)} placeholder={canPost?'家族構成、避難状況などを入力してください':'支援可能な物資や補足を入力してください'} rows={4}/></label><label>投稿タグ（複数可）<input placeholder="例：飲料水, 車で搬送可能" onChange={e=>update('tags',e.target.value)}/></label><div className="form-actions"><button className="secondary-button" onClick={()=>{setDraftSaved(true)}}><FileText size={16}/>下書き保存</button><button className="primary-button" disabled={!canPost} onClick={()=>canPost&&submit()}><Send size={16}/>{canPost?'支援を依頼する':'支援者は依頼を投稿できません'}</button></div>{draftSaved&&<p className="saved-note"><Check size={15}/>下書きを端末に保存しました</p>}</div><div className="privacy-note"><ShieldCheck size={17}/>個人情報は公開されません。マッチング成立後も、必要最小限の情報のみ共有されます。</div></div> }
+function PostForm({form,setForm,submit,draftSaved,setDraftSaved,role}:{form:any;setForm:any;submit:()=>void;draftSaved:boolean;setDraftSaved:(x:boolean)=>void;role:Role}) { const update=(k:string,v:string)=>setForm({...form,[k]:v}); const canPost=role==='被災者'; return <div className="form-wrap"><div className="form-intro"><label className="field-label" htmlFor="post-tags">検索タグ（カンマ区切り）</label><input id="post-tags" className="text-input" value={form.tags ?? ''} onChange={e=>update('tags',e.target.value)} placeholder="例：水、乳幼児、避難所" /></div><div className="form-intro"><div className="big-icon"><HeartHandshake size={25}/></div><div><h2>{canPost?'支援を依頼する':'支援物資を登録する'}</h2><p>{canPost?'必要な物資や助けを、できるだけ具体的に教えてください。':'支援者情報はマッチングに利用されます。必要な物資を登録してください。'}</p></div></div>{!canPost&&<div className="notice-card"><ShieldCheck size={18}/><span>支援者アカウントは支援依頼を投稿できません。マイページから被災者アカウントへ切り替えると投稿できます。</span></div>}<div className="form-card"><label>{canPost?'必要な物資':'支援できる物資'}<input value={form.title} onChange={e=>update('title',e.target.value)} placeholder={canPost?'例：飲料水を届けてほしい':'例：飲料水・衛生用品を支援'}/></label><div className="form-grid"><label>カテゴリ<select value={form.category} onChange={e=>update('category',e.target.value)}><option>水・飲料</option><option>食料</option><option>医薬品</option><option>乳幼児用品</option><option>衣類・寝具</option></select></label><label>数量<input value={form.quantity} onChange={e=>update('quantity',e.target.value)} placeholder="例：12本"/></label></div><label>受取場所<input value={form.place} onChange={e=>update('place',e.target.value)} placeholder="例：輪島市 河井町 避難所入口"/></label><div className="form-grid"><label>緊急度<div className="segmented">{['低','中','高'].map(x=><button type="button" className={form.urgency===x?'selected':''} onClick={()=>update('urgency',x)} key={x}>{x}</button>)}</div></label><label>受取可能時間<input placeholder="例：いつでも"/></label></div><label>{canPost?'詳細（任意）':'その他（任意）'}<textarea value={form.description} onChange={e=>update('description',e.target.value)} placeholder={canPost?'家族構成、避難状況などを入力してください':'支援可能な物資や補足を入力してください'} rows={4}/></label><label>投稿タグ（複数可）<input placeholder="例：飲料水, 車で搬送可能" onChange={e=>update('tags',e.target.value)}/></label><div className="form-actions"><button className="secondary-button" onClick={()=>{setDraftSaved(true)}}><FileText size={16}/>下書き保存</button><button className="primary-button" disabled={!canPost} onClick={()=>canPost&&submit()}><Send size={16}/>{canPost?'支援を依頼する':'支援者は依頼を投稿できません'}</button></div>{draftSaved&&<p className="saved-note"><Check size={15}/>下書きを端末に保存しました</p>}</div><div className="privacy-note"><ShieldCheck size={17}/>個人情報は公開されません。マッチング成立後も、必要最小限の情報のみ共有されます。</div></div> }
 
 function MapView({level,onNotice}:{level:number;onNotice:(s:string)=>void}) { const pins=[{x:'25%',y:'31%',type:'避難所',n:'輪島市立体育館',c:'blue'},{x:'61%',y:'25%',type:'物資',n:'支援物資置き場',c:'green'},{x:'48%',y:'65%',type:'通行注意',n:'県道249号',c:'red'},{x:'76%',y:'70%',type:'避難所',n:'珠洲市役所',c:'blue'}]; return <div className="map-page"><div className="map-toolbar"><div className="search-input"><Search size={17}/><input placeholder="地名・施設名を検索"/></div><button className="secondary-button"><Navigation size={16}/>現在地</button></div><div className="map-canvas"><div className="map-grid"/><div className="river river-a"/><div className="river river-b"/>{pins.map(p=><button key={p.n} className={`map-pin pin-${p.c}`} style={{left:p.x,top:p.y}} onClick={()=>onNotice(`${p.n}の詳細を表示しました`)}><span><MapPin size={17}/></span><small>{p.type}</small></button>)}<div className="cluster" style={{left:'38%',top:'45%'}}>12</div><div className="map-legend"><b>地図表示</b><span><i className="legend-dot blue"/>避難所</span><span><i className="legend-dot green"/>物資</span><span><i className="legend-dot red"/>通行注意</span></div><div className="map-caution"><AlertTriangle size={16}/>通行止め・危険区域の情報は自治体発表を優先してください</div></div><div className="map-bottom"><div><b>近くの支援スポット</b><span>50m以内のピンをまとめて表示しています</span></div><button className="text-button" onClick={()=>onNotice('ピン投稿フォームを開きました')}><Plus size={16}/>ピンを投稿</button></div></div> }
 // DEMO ACCOUNT — REMOVE THIS BLOCK to remove the temporary role-switching demo.
