@@ -39,6 +39,8 @@ export default function MatchingPage() {
       if (response.ok) {
         const body = await response.json()
         setItems(body.data ?? [])
+        // 未ログインでもページは利用できますが、個人候補はログイン後に表示します。
+        if (body.authenticated === false) setNotice('ログインするとマッチング候補を確認できます')
       } else if (response.status === 401) setNotice('ログインするとマッチング候補を確認できます')
     }).catch(() => setNotice('マッチング情報を取得できませんでした'))
   }, [])

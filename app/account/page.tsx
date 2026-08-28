@@ -4,21 +4,37 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
-/** ログイン中のユーザー情報と、災害時の自己申告（役割・地域）を管理します。 */
+/** マイページを担当します。未ログインでも案内を表示し、保存が必要な操作だけ認証へ誘導します。 */
 export default function AccountPage() {
-  // Supabaseブラウザクライアントはブラウザでだけ初期化し、静的ビルド時の環境変数エラーを防ぎます。
+  // ブラウザのSupabaseセッションを読み、ログイン済みかどうかだけを確認します。
   const [user, setUser] = useState<{ email?: string } | null>(null)
+  const [checked, setChecked] = useState(false)
   const [role, setRole] = useState('victim')
   const [location, setLocation] = useState('')
   const [message, setMessage] = useState('')
-  useEffect(() => { createClient().auth.getUser().then(({ data }) => setUser(data.user)) }, [])
+
+  useEffect(() => {
+    // 認証取得に失敗しても公開ページは表示し、保護操作だけを止めます。
+    createClient().auth.getUser().then(({ data }) => { setUser(data.user); setChecked(true) }).catch(() => setChecked(true))
+  }, [])
+
   async function save() {
+    // DB保存はログイン済みユーザーのIDを使い、未ログイン時は認証導線を案内します。
+    if (!user) { setMessage('保存するにはログインしてください。'); return }
     const supabase = createClient()
     const { data: auth } = await supabase.auth.getUser()
-    const { error } = await supabase.from('profiles').upsert({ id: auth.user?.id, role_type: role, disaster_location: location })
-    setMessage(error ? '申告を保存できませんでした。ログイン状態を確認してください。' : '申告内容を保存しました。')
+    if (!auth.user) { setMessage('保存するにはログインしてください。'); return }
+    const { error } = await supabase.from('profiles').upsert({ id: auth.user.id, role_type: role, disaster_location: location })
+    setMessage(error ? '申告を保存できませんでした。' : '申告内容を保存しました。')
   }
-  async function logout() { await createClient().auth.signOut(); window.location.href = '/' }
-  if (!user) return <main className="auth-page"><section className="auth-card"><h1>ログインが必要です</h1><p className="auth-lead">アカウント情報と申告機能を利用するにはログインしてください。</p><Link href="/auth/login" className="primary-button full">ログインする</Link></section></main>
-  return <main className="auth-page"><section className="auth-card"><p className="eyebrow">アカウント</p><h1>マイページ</h1><p className="auth-lead">{user.email}</p><div className="auth-form"><label>現在の立場<select value={role} onChange={e => setRole(e.target.value)}><option value="victim">被災者</option><option value="supporter">支援者</option></select></label><label>支援・避難地域<input value={location} onChange={e => setLocation(e.target.value)} placeholder="例：石川県輪島市" /></label><button className="primary-button full" onClick={save}>申告内容を保存</button>{message && <p className="form-note" role="status">{message}</p>}<button className="secondary-button full" onClick={logout}>ログアウト</button></div><Link href="/account/declaration" className="primary-button full">災害時の自己申告を変更する</Link><Link href="/matching" className="text-button">マッチングページへ</Link></section></main>
+
+  async function logout() {
+    // ログアウト後は公開ホームへ戻し、セッションを画面に残しません。
+    await createClient().auth.signOut()
+    window.location.href = '/'
+  }
+
+  if (!checked) return <main className="auth-page"><section className="auth-card"><p className="auth-lead">アカウント情報を確認しています。</p></section></main>
+
+  return <main className="auth-page"><section className="auth-card"><p className="eyebrow">アカウント</p><h1>マイページ</h1>{user ? <p className="auth-lead">{user.email}</p> : <div className="notice-card"><p>ログインなしでも支援情報の検索・地図確認・使い方の閲覧ができます。</p><Link href="/auth/login" className="primary-button full">ログインする</Link></div>}<div className="auth-form"><label>現在の立場<select value={role} onChange={e => setRole(e.target.value)}><option value="victim">被災者</option><option value="supporter">支援者</option></select></label><label>支援・避難地域<input value={location} onChange={e => setLocation(e.target.value)} placeholder="例：全国・関東・石川県" /></label><button className="primary-button full" onClick={save}>申告内容を保存</button>{message && <p className="form-note" role="status">{message}</p>}{user && <button className="secondary-button full" onClick={logout}>ログアウト</button>}</div><Link href={user ? '/account/declaration' : '/auth/login'} className="primary-button full">災害時の自己申告を変更する</Link><Link href="/matching" className="text-button">マッチングページへ</Link></section></main>
 }
