@@ -85,19 +85,8 @@ export default function Page() {
     }
   }, [menuOpen])
 
-  // メインメニューを開いている間、メニュー本体と開閉ボタン以外のクリックで自動的に閉じます。
-  // キャプチャ段階で監視するため、ページ内の別コンポーネントやリンクからのクリックも確実に処理します。
-  useEffect(() => {
-    if (!menuOpen) return
-    const closeOnOutsidePointer = (event: PointerEvent) => {
-      const target = event.target
-      if (!(target instanceof Element)) return
-      if (target.closest('.quick-menu') || target.closest('[aria-label="メインメニュー"]') || target.closest('[aria-label="メインメニューを閉じる"]')) return
-      setMenuOpen(false)
-    }
-    document.addEventListener('pointerdown', closeOnOutsidePointer, true)
-    return () => document.removeEventListener('pointerdown', closeOnOutsidePointer, true)
-  }, [menuOpen])
+  // メニュー外のクリックは、メニュー用オーバーレイ側で閉じます。
+  // document のキャプチャ監視は、メニュー項目の click より先に実行されて遷移を妨げるため使いません。
 
   const filtered = useMemo(() => {
     const terms = query.split(/[、,\s]+/).map(term => term.trim()).filter(Boolean)
