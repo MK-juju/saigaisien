@@ -27,7 +27,15 @@ export async function POST(request: Request) {
     // 管理者判定はapp_metadataを使うサーバー側ヘルパーで強制します。
     await requireAdmin()
     const supabase = await createClient()
-    const { error } = await supabase.from('disaster_regions').update({ level, manual_level: level, level_updated_at: new Date().toISOString() }).eq('scope', '全国')
+    const updatedAt = new Date().toISOString()
+    // 全国のレコードを更新し、未作成の場合も同じ処理で作成してDBを必ず最新化します。
+    const { error } = await supabase.from('disaster_regions').upsert({
+      name: '全国',
+      scope: '全国',
+      level,
+      manual_level: level,
+      level_updated_at: updatedAt,
+    }, { onConflict: 'scope' })
     if (error) return NextResponse.json({ error: '災害レベルを保存できませんでした' }, { status: 500 })
   } catch {
     return NextResponse.json({ error: '管理者権限が必要です' }, { status: 403 })
