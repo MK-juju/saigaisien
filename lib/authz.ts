@@ -1,3 +1,4 @@
+/** このファイルの役割と主要な処理フローを、実装の近くにコメントで説明しています。 */
 import { requireUser } from '@/lib/supabase/server'
 
 export async function requireAdmin() {

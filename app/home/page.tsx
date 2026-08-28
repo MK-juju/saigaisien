@@ -1,3 +1,4 @@
+/** このファイルの役割と主要な画面動作を、実装の近くにコメントで説明しています。 */
 import Link from 'next/link'
 import { HeartHandshake, MapPin, ShieldCheck, ArrowRight, LifeBuoy } from 'lucide-react'
 

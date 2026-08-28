@@ -1,3 +1,4 @@
+/** このファイルの役割と主要な処理フローを、実装の近くにコメントで説明しています。 */
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createClient as createServiceClient } from '@supabase/supabase-js'

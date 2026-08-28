@@ -1,3 +1,4 @@
+/** このファイルの役割と主要な処理フローを、実装の近くにコメントで説明しています。 */
 import { createBrowserClient } from '@supabase/ssr'
 import type { SupabaseClient } from '@supabase/supabase-js'
 

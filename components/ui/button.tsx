@@ -1,3 +1,4 @@
+/** このファイルの役割と主要な画面動作を、実装の近くにコメントで説明しています。 */
 import { Button as ButtonPrimitive } from '@base-ui/react/button'
 import { cva, type VariantProps } from 'class-variance-authority'
 

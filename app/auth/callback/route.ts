@@ -1,3 +1,4 @@
+/** このファイルの役割と主要な処理フローを、実装の近くにコメントで説明しています。 */
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 

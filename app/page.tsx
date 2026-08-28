@@ -1,4 +1,5 @@
 'use client'
+/** このファイルの役割と主要な画面動作を、実装の近くにコメントで説明しています。 */
 
 import dynamic from 'next/dynamic'
 import { useEffect, useMemo, useState } from 'react'
