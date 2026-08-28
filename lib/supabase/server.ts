@@ -44,12 +44,39 @@ export async function requireUserOrDemo() {
       supporter: ['supporter', '支援者'],
       admin: ['admin', '管理者'],
     }
-    const { data: profile, error: profileError } = await serviceClient
+    let { data: profile, error: profileError } = await serviceClient
       .from('profiles')
       .select('id,role_type')
       .in('role_type', roleAliases[resolvedDemoRole])
       .limit(1)
       .maybeSingle()
+
+    // BEGIN DEMO ACCESS: デモ用プロフィールが未作成のアップロード環境では、service roleで認証ユーザーとプロフィールを一度だけ作成します。
+    // 公開時は、この自動作成ブロック（BEGIN DEMO ACCESSからEND DEMO ACCESSまで）を削除してください。
+    if (!profile?.id && !profileError) {
+      const email = `demo-${resolvedDemoRole}@yorisoi.invalid`
+      const { data: created, error: createError } = await serviceClient.auth.admin.createUser({
+        email,
+        password: crypto.randomUUID(),
+        email_confirm: true,
+        user_metadata: { role_type: resolvedDemoRole },
+        app_metadata: { role: resolvedDemoRole },
+      })
+      if (createError && !createError.message.toLowerCase().includes('already')) throw new Error('DEMO_PROFILE_CREATE_FAILED')
+      // 既存のデモ認証ユーザーがいる場合も、そのIDを取得してプロフィールを補完します。
+      const existing = createError
+        ? await serviceClient.auth.admin.listUsers({ page: 1, perPage: 1000 })
+        : null
+      const userId = created.user?.id ?? existing?.data.users.find((candidate) => candidate.email === email)?.id
+      if (userId) {
+        const { error: upsertError } = await serviceClient.from('profiles').upsert({ id: userId, role_type: resolvedDemoRole }, { onConflict: 'id' })
+        if (upsertError) throw new Error('DEMO_PROFILE_CREATE_FAILED')
+      }
+      const resolved = await serviceClient.from('profiles').select('id,role_type').in('role_type', roleAliases[resolvedDemoRole]).limit(1).maybeSingle()
+      profile = resolved.data
+      profileError = resolved.error
+    }
+    // END DEMO ACCESS
     if (profileError || !profile?.id) throw new Error('DEMO_PROFILE_MISSING')
     return { supabase: serviceClient, user: { id: profile.id }, demo: true as const }
   }
