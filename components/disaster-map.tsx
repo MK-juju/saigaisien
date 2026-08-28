@@ -83,7 +83,8 @@ export default function DisasterMap({ onNotice, role }: { onNotice: (message: st
           lng: Number(row.longitude ?? row.lng),
           verified: Boolean(row.approved),
         })).filter((pin: DisasterPin) => Number.isFinite(pin.lat) && Number.isFinite(pin.lng))
-        if (!cancelled && nextPins.length > 0) setPins(nextPins)
+        // APIの結果が空でも初期データを残さず、期限切れピンを地図から確実に除外します。
+        if (!cancelled) setPins(nextPins)
       })
       .catch(() => undefined)
     return () => { cancelled = true }

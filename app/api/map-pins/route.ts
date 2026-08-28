@@ -18,8 +18,9 @@ export async function GET() {
     })
     const { data, error } = await serviceClient
       .from('map_pins')
-      .select('id,author_id,pin_type,title,description,latitude,longitude,approved,created_at')
+      .select('id,author_id,pin_type,title,description,latitude,longitude,approved,created_at,expires_at')
       .is('hidden_at', null)
+      .gt('expires_at', new Date().toISOString())
       .order('created_at', { ascending: false })
     if (error) throw error
     return NextResponse.json({ data }, {

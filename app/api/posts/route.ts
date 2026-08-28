@@ -24,7 +24,7 @@ export async function GET(request: Request) {
   try {
     const { supabase } = await requireUserOrDemo()
     const search = new URL(request.url).searchParams.get('q')?.trim()
-    let query = supabase.from('posts').select('id,author_id,post_type,title,category,quantity,place,latitude,longitude,urgency,deadline,available_time,delivery_method,description,status,disaster_type,created_at').is('hidden_at', null).order('created_at', { ascending: false }).limit(100)
+    let query = supabase.from('posts').select('id,author_id,post_type,title,category,quantity,place,latitude,longitude,urgency,deadline,available_time,delivery_method,description,status,disaster_type,created_at,expires_at').is('hidden_at', null).gt('expires_at', new Date().toISOString()).order('created_at', { ascending: false }).limit(100)
     if (search) query = query.or(`title.ilike.%${search}%,place.ilike.%${search}%,description.ilike.%${search}%,category.ilike.%${search}%`)
     const { data, error } = await query
     if (error) throw error
