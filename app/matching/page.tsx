@@ -40,7 +40,8 @@ export default function MatchingPage() {
       // レベルを確認できない場合は安全側（ロック）を維持します。
       setLevelLoaded(true)
     })
-    fetch('/api/matchings', { cache: 'no-store' }).then(async (response) => {
+    // BEGIN DEMO ACCESS: アップロード環境でデモCookieが分離されても、マッチングAPIへデモアクセスを伝えます。公開時はこのヘッダーを削除します。
+    fetch('/api/matchings', { cache: 'no-store', headers: { 'x-demo-access': 'true' } }).then(async (response) => {
       if (response.ok) {
         const body = await response.json()
         setItems(body.data ?? [])
