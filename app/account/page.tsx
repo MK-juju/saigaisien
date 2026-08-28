@@ -20,8 +20,14 @@ export default function AccountPage() {
   }, [])
 
   async function save() {
-    // DB保存はログイン済みユーザーのIDを使い、未ログイン時は認証導線を案内します。
-    if (!user) { setMessage('保存するにはログインしてください。'); return }
+    // DB保存はログイン済みユーザーのIDを使います。未ログインのデモでは画面内の役割を切り替えます。
+    if (!user) {
+      // BEGIN DEMO ACCESS: デモ確認用。公開後にデモ機能を削除する場合は、このコメントからENDまで削除します。
+      document.cookie = `yorisoi_demo_role=${role}; path=/; max-age=86400; SameSite=Lax`
+      setMessage('デモアカウントの役割を更新しました。')
+      return
+      // END DEMO ACCESS
+    }
     const supabase = createClient()
     const { data: auth } = await supabase.auth.getUser()
     if (!auth.user) { setMessage('保存するにはログインしてください。'); return }
