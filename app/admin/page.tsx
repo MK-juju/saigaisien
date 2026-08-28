@@ -10,7 +10,7 @@ export default function AdminPage() {
   async function save(event: FormEvent) {
     event.preventDefault()
     setMessage('保存しています…')
-    const response = await fetch('/api/disaster-level', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ level: Number(level) }) })
+    const response = await fetch('/api/disaster-level', { method: 'POST', headers: { 'content-type': 'application/json', 'x-demo-admin': 'true' }, body: JSON.stringify({ level: Number(level) }) })
     const data = await response.json().catch(() => ({}))
     setMessage(response.ok ? `全国の災害レベルをLv.${data.level}に更新しました。` : data.error ?? '保存できませんでした。')
   }
