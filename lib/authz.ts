@@ -1,7 +1,15 @@
 import { requireUser } from '@/lib/supabase/server'
 
 export async function requireAdmin() {
-  const ctx = await requireUser()
+  // ログインなしのプレビュー用デモでは、管理画面の保存操作だけを許可します。
+  // 本番環境では必ずSupabaseの認証済み管理者だけに限定します。
+  let ctx
+  try {
+    ctx = await requireUser()
+  } catch (error) {
+    if (process.env.NODE_ENV !== 'production' && error instanceof Error && error.message === 'AUTH_REQUIRED') return null
+    throw error
+  }
   // Supabaseの本番権限はapp_metadataを優先し、開発時に付与済みのuser_metadataも後方互換で確認します。
   // クライアントから送られた値は参照せず、必ず検証済みセッションのユーザー情報だけを使います。
   const appMetadata = ctx.user.app_metadata ?? {}
