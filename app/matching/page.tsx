@@ -2,6 +2,7 @@
 /** このファイルの役割と主要な画面動作を、実装の近くにコメントで説明しています。 */
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, HeartHandshake, LockKeyhole, Package, ShieldCheck, MessageCircle, Check, Clock3 } from 'lucide-react'
 
@@ -14,6 +15,9 @@ type Filter = 'すべて' | '申請中' | '成立' | '完了'
  * レベルによる利用制限も見た目だけでなくAPI側で強制されます。
  */
 export default function MatchingPage() {
+  const router = useRouter()
+  // 前の画面へ戻れる履歴がない場合は、検索ホームへ安全に戻します。
+  const goBack = () => { if (window.history.length > 1) router.back(); else router.push('/') }
   // 環境変数APIを取得できない場合も安全側に倒し、マッチングを開放しません。
   // 初期値でもマッチングを開放しない。サーバー取得が完了するまでロック状態を維持します。
   // 初期値を表示せず、サーバーの最新値を取得するまでロック画面だけを表示します。
@@ -58,7 +62,7 @@ export default function MatchingPage() {
   const displayLevel = level ?? '確認中'
 
   return <main className="standalone-page">
-    <header className="standalone-header"><Link href="/" className="icon-button" aria-label="最上位のホームへ移動"><ArrowLeft size={20} /></Link><Link href="/" className="brand" aria-label="最上位のホームへ移動"><span className="brand-mark"><HeartHandshake size={21} /></span><span><strong>よりそい</strong><small>災害支援マッチング</small></span></Link><span className="standalone-level"><span className={`status-dot ${locked ? '' : 'green'}`} />災害レベル Lv.{displayLevel}</span></header>
+    <header className="standalone-header"><button type="button" className="icon-button" aria-label="前の画面へ戻る" onClick={goBack}><ArrowLeft size={20} /></button><Link href="/" className="brand" aria-label="最上位のホームへ移動"><span className="brand-mark"><HeartHandshake size={21} /></span><span><strong>よりそい</strong><small>災害支援マッチング</small></span></Link><span className="standalone-level"><span className={`status-dot ${locked ? '' : 'green'}`} />災害レベル Lv.{displayLevel}</span></header>
     <section className="standalone-content"><div className="content-head"><div><p className="eyebrow">つながりを確認する</p><h1>マッチング</h1></div><div className="content-actions"><Link href="/messages/demo" className="secondary-button"><MessageCircle size={16} />メールページ</Link><Link href="/" className="secondary-button">支援依頼を探す</Link></div></div>
       {locked ? <div className="locked-state matching-lock-overlay" role="alertdialog" aria-live="assertive"><LockKeyhole size={30} /><h2>この機能はレベル2以上では使用できません</h2><p>災害レベルがLv.1になるまでマッチング機能は停止しています。</p><Link href="/" className="primary-button">検索へ戻る</Link></div> : <>
         <div className="matching-intro"><div className="intro-icon"><HeartHandshake size={22} /></div><div><h2>マッチング候補を確認</h2><p>成立状況と対象の支援依頼を確認できます。マッチ度や連絡先は表示しません。</p></div><ShieldCheck size={20} /></div>
