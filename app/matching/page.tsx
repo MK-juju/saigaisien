@@ -13,14 +13,15 @@ type Filter = 'すべて' | '申請中' | '成立' | '完了'
  * レベルによる利用制限も見た目だけでなくAPI側で強制されます。
  */
 export default function MatchingPage() {
-  const [level, setLevel] = useState(1)
+  // 環境変数APIを取得できない場合も安全側に倒し、マッチングを開放しません。
+  const [level, setLevel] = useState(2)
   const [items, setItems] = useState<Matching[]>([])
   const [filter, setFilter] = useState<Filter>('すべて')
   const [notice, setNotice] = useState('')
 
   useEffect(() => {
     // 地域レベルは公開読み取りAPIから取得し、表示とサーバー制限の基準を揃えます。
-    fetch('/api/regions').then(async (response) => {
+    fetch('/api/disaster-level').then(async (response) => {
       if (!response.ok) return
       const body = await response.json()
       const value = Number(body.level)
