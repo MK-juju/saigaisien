@@ -21,7 +21,9 @@ function NewMapPinPageContent() {
       setError('タイトルと投稿内容を入力してください')
       return
     }
-    void fetch('/api/map-pins', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin_type: form.type, title: form.title.trim(), description: form.content.trim(), latitude: Number(coordinates.lat), longitude: Number(coordinates.lng) }) }).then(async (response) => { if (!response.ok) { const result = await response.json().catch(() => ({})); setError(result.error ?? 'ピンを投稿できませんでした'); return } router.push('/') }).catch(() => setError('通信に失敗しました。内容を確認して再度お試しください'))
+    // BEGIN DEMO ACCESS: デモCookieをAPIへ明示的に渡し、未ログインのデモ利用者でもピン投稿できるようにします。公開時はこのコメントからENDまで削除します。
+    // デモ画面から送信された投稿であることをサーバーへ伝えます。公開時はこの識別子とサーバー側のデモ処理を削除します。
+    void fetch('/api/map-pins', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-demo-access': 'true' }, body: JSON.stringify({ pin_type: form.type, title: form.title.trim(), description: form.content.trim(), latitude: Number(coordinates.lat), longitude: Number(coordinates.lng) }) }).then(async (response) => { if (!response.ok) { const result = await response.json().catch(() => ({})); setError(result.error ?? 'ピンを投稿できませんでした'); return } router.push('/') }).catch(() => setError('通信に失敗しました。内容を確認して再度お試しください'))
   }
 
   return (

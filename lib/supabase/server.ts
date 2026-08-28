@@ -26,8 +26,13 @@ export async function requireUserOrDemo() {
   } catch (error) {
     if (!(error instanceof Error) || error.message !== 'AUTH_REQUIRED') throw error
     const cookieStore = await cookies()
+    // BEGIN DEMO ACCESS: アップロード環境でCookieが分離される場合も、ピン投稿画面から渡されたデモ識別子を利用します。公開時はこのブロックを削除します。
     const demoRole = cookieStore.get('yorisoi_demo_role')?.value
-    if (!demoRole || !['victim', 'supporter', 'admin'].includes(demoRole)) throw error
+    const requestHeaders = await import('next/headers').then(({ headers }) => headers())
+    const hasDemoHeader = requestHeaders.get('x-demo-access') === 'true'
+    const resolvedDemoRole = demoRole ?? (hasDemoHeader ? 'victim' : undefined)
+    if (!resolvedDemoRole || !['victim', 'supporter', 'admin'].includes(resolvedDemoRole)) throw error
+    // END DEMO ACCESS
     const url = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SECRET_KEY
     if (!url || !key) throw new Error('DEMO_SERVER_CONFIG_MISSING')
