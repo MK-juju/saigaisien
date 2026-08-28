@@ -11,6 +11,10 @@
 .map-page .map-canvas{position:relative;width:100%;height:clamp(420px,calc(100dvh - 245px),760px);min-height:420px;overflow:hidden}
 .map-page .real-map{isolation:isolate;background:#dbe8ed}
 .map-page .leaflet-map,.map-page .leaflet-container{width:100%;height:100%;min-height:420px;z-index:1}
+/* Leafletの標準アイコン画像に依存せず、アップロード先でも同じピンを表示します。 */
+.map-page .custom-pin{width:34px!important;height:42px!important;background:transparent!important;border:0!important;overflow:visible!important}
+.map-page .custom-pin span{display:grid;width:34px;height:34px;place-items:center;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 2px 6px #17243b44}
+.map-page .custom-pin svg{transform:rotate(45deg)}
 @media(min-width:801px){.map-page .map-canvas{height:clamp(520px,calc(100dvh - 210px),820px);min-height:520px}}
 @media(max-width:800px){.map-page .map-canvas{height:calc(100dvh - 245px);min-height:420px}}
 .app-shell .content{display:flex;flex-direction:column}
