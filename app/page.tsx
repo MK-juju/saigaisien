@@ -22,9 +22,30 @@ const DisasterMap = dynamic(() => import('@/components/disaster-map'), { ssr: fa
 
 type Tab = '検索' | '投稿' | '地図' | 'チャット' | 'マイページ'
 
+// 既存のコード（Badge や IconButton の下あたりに追加してください）
 function Badge({ children, tone = 'neutral' }: { children: React.ReactNode; tone?: 'red' | 'amber' | 'green' | 'blue' | 'neutral' }) {
   return <span className={`badge badge-${tone}`}>{children}</span>
 }
+
+// 👇 ここから追加
+function SafeTime({ dateString }: { dateString: string }) {
+  const [formatted, setFormatted] = useState('')
+
+  useEffect(() => {
+    // ブラウザに表示されてから、正しい時間を計算してセットする
+    const d = new Date(dateString)
+    if (!isNaN(d.getTime())) {
+      // 例: "19:33" のような形式にする場合（お好みのフォーマットに合わせて調整してください）
+      const hours = String(d.getHours()).padStart(2, '0')
+      const minutes = String(d.getMinutes()).padStart(2, '0')
+      setFormatted(`${hours}:${minutes}`)
+    }
+  }, [dateString])
+
+  // サーバー側（マウント前）は非表示、または "--:--" にしてズレを防ぐ
+  return <span>{formatted || '--:--'}</span>
+}
+// 👆 ここまで追加
 
 function IconButton({ label, children, onClick }: { label: string; children: React.ReactNode; onClick?: () => void }) {
   return <button aria-label={label} className="icon-button" onClick={onClick}>{children}</button>
